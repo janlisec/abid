@@ -1,1 +1,1 @@
-This Shiny-App is described in the following publication "Tscheuschner et al., 2022".
+This repository contains the R code to run a Shiny-App which is described in the following publication "Tscheuschner et al. (2022) Methods for antibody identification in one hour – examined with murine anti-SARS-CoV-2 MAbs". It can be tested online at https://gets.shinyapps.io/ABID/ or run locally using the code from this repository. A library of MALDI spectra can be obtained from jan.lisec@bam.de on demand. Alternatively the App can be used with spectra files provided by the user.
