@@ -1,14 +1,14 @@
 # ABID
 
 <!-- badges: start -->
-[![Static Badge](https://img.shields.io/github/r-package/v/janlisec/abid)](https://img.shields.io/github/r-package/v/janlisec/abid)
 <!-- 
 [![Static Badge](https://img.shields.io/badge/LiveApp-blue)](https://apps.bam.de/shn01/abid/)
-[![CRAN status](https://www.r-pkg.org/badges/version/eCerto)](https://CRAN.R-project.org/package=eCerto)
-[![codecov](https://codecov.io/gh/janlisec/eCerto/branch/main/graph/badge.svg)](https://app.codecov.io/gh/janlisec/eCerto?branch=main)
+[![CRAN status](https://www.r-pkg.org/badges/version/abid)](https://CRAN.R-project.org/package=abid)
+[![R-CMD-check](https://github.com/janlisec/abid/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/janlisec/abid/actions/workflows/R-CMD-check.yaml)
+[![test-coverage](https://github.com/janlisec/abid/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/janlisec/abid/actions/workflows/test-coverage.yaml)
+[![codecov](https://codecov.io/gh/janlisec/abid/branch/main/graph/badge.svg)](https://app.codecov.io/gh/janlisec/abid?branch=main)
  -->
-[![R-CMD-check](https://github.com/janlisec/eCerto/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/janlisec/eCerto/actions/workflows/R-CMD-check.yaml)
-[![test-coverage](https://github.com/janlisec/eCerto/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/janlisec/eCerto/actions/workflows/test-coverage.yaml)
+[![Static Badge](https://img.shields.io/github/r-package/v/janlisec/abid)](https://img.shields.io/github/r-package/v/janlisec/abid)
 [![Static Badge](https://img.shields.io/badge/doi-10.3390/antib11020027-yellow.svg)](https://doi.org/10.3390/antib11020027)
 <!-- badges: end -->
 
