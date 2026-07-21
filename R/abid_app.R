@@ -1,7 +1,7 @@
 #' @title abid_app.
 #' @description \code{abid_app} will start the App.
-#' @details #' Evaluation of MALDI measurements of digested antibodies.
-#' @return A 'shinyApp' object.
+#' @details Evaluation of MALDI measurements of digested antibodies.
+#' @return A `shinyApp` object.
 #' @export
 #' @importFrom shiny fluidPage sidebarLayout sidebarPanel fluidRow column selectInput fileInput tabsetPanel tabPanel p plotOutput uiOutput mainPanel helpText numericInput actionButton checkboxInput radioButtons dblclickOpts brushOpts reactiveVal isolate reactive req need observeEvent updateSelectizeInput updateNumericInput renderPrint h2 renderPlot renderUI shinyApp updateSelectInput validate
 #' @importFrom bsplus use_bs_tooltip bs_embed_tooltip %>%
@@ -14,18 +14,56 @@
 #' @importFrom MALDIquant transformIntensity smoothIntensity removeBaseline detectPeaks mass intensity
 #' @importFrom stringr str_sort
 #' @importFrom plyr ldply
+#' @import shiny
 #' 
 abid_app <- function() {
+  
+  # set TRUE to compile package for use at BAM Server (including tracking and Datenschutzerklärung)
+  bam_server <- TRUE
+  
+  add_resources <- function() {
+    useShinyjs()
+    use_bs_tooltip()
+    if (bam_server) {
+      shiny::tags$head(
+        shiny::HTML('<noscript><p><img src="https://agw1.bam.de/piwik/matomo.php?idsite=24&amp;rec=1" style="border:0;" alt="" /></p></noscript>'),
+        shiny::HTML('<script type="text/javascript" src="https://agw1.bam.de/piwik/piwik.js" async defer></script>'),
+        shiny::tags$script("
+          var idSite = 24;
+          var piwikTrackingApiUrl = 'https://agw1.bam.de/piwik/piwik.php';
+          var _paq = _paq || [];
+          _paq.push(['setTrackerUrl', piwikTrackingApiUrl]);
+          _paq.push(['setSiteId', idSite]);
+          _paq.push(['setDocumentTitle', document.domain + '/' + document.title]);
+          _paq.push(['setDoNotTrack', true]);
+          _paq.push(['trackPageView']);
+          _paq.push(['enableLinkTracking']);
+        ")
+      )
+    }
+    
+  }
 
   # Define UI for application ----
   ui <- fluidPage(
-    useShinyjs(),
-    use_bs_tooltip(),
+    add_resources(),
     sidebarLayout(
       sidebarPanel(
-        fluidRow(
-          column(width = 4, h2("ABID")),
-          column(width = 8, helpText("ver 0.61.2 (20221115) jan.lisec@bam.de", align = "right"))
+        div(
+          style = "margin-bottom: 20px; width: 100%; min-height: 40px",
+          div(
+            style = "float: left; font-size: 20px; width: 30%",
+            shiny::strong("BAM"), shiny::em("ABID")
+          ),
+          div(
+            style = "float: right; width: 70%;",
+            HTML(
+              'ver', as.character(utils::packageVersion("ABID")), 
+              '|', as.character(utils::packageDate("ABID")),
+              '| <a href="mailto:jan.lisec@bam.de">jan.lisec@bam.de</a>',
+              ifelse(bam_server, '| <a href="https://www.bam.de/Navigation/DE/Services/Datenschutz/datenschutz.html" target="_blank" rel="noopener noreferrer">BAM Datenschutzerkl\u00e4rung</a>', '')
+            )
+          )
         ),
         fluidRow(
           column(

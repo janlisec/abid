@@ -7,7 +7,7 @@
 abid_app()
 }
 \value{
-A shinyApp object.
+A \code{shinyApp} object.
 }
 \description{
 \code{abid_app} will start the App.
