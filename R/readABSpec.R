@@ -5,7 +5,6 @@
 #' @param ... Further parameters to read.table function.
 #' @details \code{readABSpec} will read a MALDI file and convert it to a MALDIquant object with metadata..
 #' @return A MALDIquant object with metadata.
-#' @importFrom utils read.table
 #' @keywords internal
 #' @noRd
 readABSpec <- function(file = NULL, meta_data = NULL, limit_mz = NULL, ...) {
@@ -14,9 +13,9 @@ readABSpec <- function(file = NULL, meta_data = NULL, limit_mz = NULL, ...) {
   n_skip <- length(grep("[[:alpha:]]", tmp))
   if ((1 + n_skip) <= length(tmp)) {
     sep <- names(which.max(table(gsub("[.[:digit:]-]", "", tmp[(1 + n_skip):length(tmp)]))))
-    if (!(sep %in% c("\t", " "))) warning("could not determine sep paramter automatically")
+    if (!(sep %in% c("\t", " "))) warning("could not determine sep parameter automatically")
   }
-  spec_data <- read.table(
+  spec_data <- utils::read.table(
     file = file,
     header = FALSE,
     skip = n_skip,
@@ -43,11 +42,11 @@ readABSpec <- function(file = NULL, meta_data = NULL, limit_mz = NULL, ...) {
           ifelse(length(gregexpr("\t", x)) >= 1, gsub("\t$", "", x), x)
         }, USE.NAMES = FALSE)
       }
-      # use space a sfallback option
+      # use space as fallback option
       if (is.null(sep) && all(grep(" ", tmp) %in% 1:length(tmp))) {
         sep <- " "
       }
-      meta_data <- plyr::ldply(tmp, function(x) {
+      meta_data <- ldply_base(tmp, function(x) {
         x <- strsplit(x, sep)[[1]]
         c(x[1], ifelse(length(x) >= 2, paste(x[-1]), ""))
       })

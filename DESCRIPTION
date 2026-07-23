@@ -1,7 +1,7 @@
 Package: ABID
 Title: Evaluation of Mass-Spectrometry Measurements of Digested Antibodies
-Version: 0.61.3
-Date: 2022-12-02
+Version: 0.61.4
+Date: 2026-07-22
 Authors@R: 
     person("Jan", "Lisec", , "jan.lisec@bam.de", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-1220-2286"))
@@ -12,7 +12,7 @@ Description: To confirm the identity of an antibody can be a difficult task.
     a single function starting a 'Shiny'-App for local use together with two 
     datasets, a library of spectra of digested antibodies and a list of masses 
     typical for certain antibody sub-classes. 
-    The App allows the user to upload similar spectra, on at a time, and compare 
+    The App allows the user to upload similar spectra, one at a time, and compare 
     them with the library spectra. It also allows to provide spectra to set up 
     a user defined library for comparison.
 License: GPL (>= 3)
@@ -20,11 +20,10 @@ URL: https://doi.org/10.3390/antib11020027
 Depends: 
     R (>= 3.50)
 Imports: 
-    bsplus,
+    bslib,
     DT,
     MALDIquant,
     openxlsx,
-    plyr,
     shiny,
     shinyjs,
     stringr

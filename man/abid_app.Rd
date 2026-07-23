@@ -4,7 +4,10 @@
 \alias{abid_app}
 \title{abid_app.}
 \usage{
-abid_app()
+abid_app(bam_server = TRUE)
+}
+\arguments{
+\item{bam_server}{Set TRUE to include BAM tracking script and privacy-policy link.}
 }
 \value{
 A \code{shinyApp} object.

@@ -1,156 +1,202 @@
 #' @title abid_app.
 #' @description \code{abid_app} will start the App.
+#' @param bam_server Set TRUE to include BAM tracking script and privacy-policy link.
 #' @details Evaluation of MALDI measurements of digested antibodies.
 #' @return A `shinyApp` object.
 #' @export
-#' @importFrom shiny fluidPage sidebarLayout sidebarPanel fluidRow column selectInput fileInput tabsetPanel tabPanel p plotOutput uiOutput mainPanel helpText numericInput actionButton checkboxInput radioButtons dblclickOpts brushOpts reactiveVal isolate reactive req need observeEvent updateSelectizeInput updateNumericInput renderPrint h2 renderPlot renderUI shinyApp updateSelectInput validate
-#' @importFrom bsplus use_bs_tooltip bs_embed_tooltip %>%
+#' @import shiny
 #' @importFrom shinyjs useShinyjs hideElement toggleElement
-#' @importFrom grDevices grey
 #' @importFrom graphics abline axis box mtext par rug segments text points
-#' @importFrom stats median
-#' @importFrom utils data
 #' @importFrom DT DTOutput renderDT JS
 #' @importFrom MALDIquant transformIntensity smoothIntensity removeBaseline detectPeaks mass intensity
 #' @importFrom stringr str_sort
-#' @importFrom plyr ldply
-#' @import shiny
 #' 
-abid_app <- function() {
-  
-  # set TRUE to compile package for use at BAM Server (including tracking and Datenschutzerklärung)
-  bam_server <- TRUE
+abid_app <- function(bam_server = TRUE) {
   
   add_resources <- function() {
-    useShinyjs()
-    use_bs_tooltip()
-    if (bam_server) {
-      shiny::tags$head(
-        shiny::HTML('<noscript><p><img src="https://agw1.bam.de/piwik/matomo.php?idsite=24&amp;rec=1" style="border:0;" alt="" /></p></noscript>'),
-        shiny::HTML('<script type="text/javascript" src="https://agw1.bam.de/piwik/piwik.js" async defer></script>'),
-        shiny::tags$script("
-          var idSite = 24;
-          var piwikTrackingApiUrl = 'https://agw1.bam.de/piwik/piwik.php';
-          var _paq = _paq || [];
-          _paq.push(['setTrackerUrl', piwikTrackingApiUrl]);
-          _paq.push(['setSiteId', idSite]);
-          _paq.push(['setDocumentTitle', document.domain + '/' + document.title]);
-          _paq.push(['setDoNotTrack', true]);
-          _paq.push(['trackPageView']);
-          _paq.push(['enableLinkTracking']);
-        ")
+    shiny::tagList(
+      shinyjs::useShinyjs(),
+      shiny::tags$style("
+        .tables-grid {
+          display: grid;
+          gap: 1rem;
+          grid-template-columns:
+            minmax(500px, 1fr)
+            240px
+            520px;
+          align-items: start;
+        }
+        @media (max-width: 1100px) {
+          .tables-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      "),
+      if (bam_server) {
+        shiny::tags$head(
+          shiny::HTML('<noscript><p><img src="https://agw1.bam.de/piwik/matomo.php?idsite=24&amp;rec=1" style="border:0;" alt="" /></p></noscript>'),
+          shiny::HTML('<script type="text/javascript" src="https://agw1.bam.de/piwik/piwik.js" async defer></script>'),
+          shiny::tags$script("
+            var idSite = 24;
+            var piwikTrackingApiUrl = 'https://agw1.bam.de/piwik/piwik.php';
+            var _paq = _paq || [];
+            _paq.push(['setTrackerUrl', piwikTrackingApiUrl]);
+            _paq.push(['setSiteId', idSite]);
+            _paq.push(['setDocumentTitle', document.domain + '/' + document.title]);
+            _paq.push(['setDoNotTrack', true]);
+            _paq.push(['trackPageView']);
+            _paq.push(['enableLinkTracking']);
+          ")
+        )
+      }
+    )
+  }
+  
+  app_footer <- function() {
+    shiny::div(
+      style = "padding-left: var(--bslib-spacer, 1rem); font-family: var(--bs-font-monospace); position: fixed; bottom: 0; background-color: black; color: white; width: 100%",
+      shiny::HTML(
+        'v', as.character(utils::packageVersion("ABID")), 
+        '|', as.character(utils::packageDate("ABID")),
+        '| <a href="mailto:jan.lisec@bam.de">jan.lisec@bam.de</a>',
+        ifelse(bam_server, '| <a href="https://bam.de/en/privacy-policy" target="_blank" rel="noopener noreferrer">BAM privacy policy</a>', '')
       )
-    }
-    
+    )
+  }
+  
+  app_shell <- function(...) {
+    shiny::tagList(
+      # adding external resources
+      add_resources(),
+      bslib::page_navbar(
+        id = "navbarpage",
+        title = list(
+          #shiny::img(src = "www/bam_logo_200px_transparent.png", height = "40px", position = "absolute", margin = "auto", alt = "BAM Logo"),
+          shiny::strong("BAM", style = "color: rgb(210,0,30);"),
+          shiny::em("ABID 2.0", style = "color: rgb(0,175,240);")
+        ),
+        navbar_options = bslib::navbar_options(
+          bg = "black", position = "fixed-top"
+        ),
+        fillable = TRUE,
+        padding = c(56+16, 16, 24+16), # top, left/right, bottom
+        footer = app_footer(),
+        ...
+      )
+    )
   }
 
   # Define UI for application ----
-  ui <- fluidPage(
-    add_resources(),
-    sidebarLayout(
-      sidebarPanel(
+  ui <- app_shell(
+    bslib::nav_panel(
+      id = "app",
+      title = "app",
+      icon = shiny::icon("angle-right"),
+      bslib::layout_sidebar(
+        padding = 0,
+        sidebar = bslib::sidebar(
+          width = 434,
+          bslib::layout_column_wrap(
+            width = "280px",  heights_equal = "row",
+            shiny::div(
+              style = "max-width: 280px",
+              selectInput(inputId = "abid_par_libsource", label = "Select library", choices = list("abid_lib", "upload files"), selected = "abid_lib"),
+              fileInput(inputId = "abid_par_path_libfiles", label = "Select Library Files", multiple = TRUE),
+              selectInput(inputId = "abid_par_selector_lib_entry", label = "Lib ID", choices = NULL)
+            ),
+            shiny::div(
+              style = "max-width: 280px",
+              fileInput(inputId = "abid_par_path_newfile", label = "Load Sample"),
+              bslib::layout_columns(
+                shinyjs::hidden(numericInput(inputId = "abid_par_match_dmz", label = "dmz [Da]", value = 0, min = 0, max = 10, step = 0.1)) |> bslib::tooltip("Absolute deviation allowed in testing for overlapping signals. Example: mz1=1000 and mz2=1000.01 overlap if dmz=0.01."),
+                shinyjs::hidden(numericInput(inputId = "abid_par_match_ppm", label = "dmz [ppm]", value = 0)) |> bslib::tooltip("Relative deviation allowed in testing for overlapping signals. Example: mz1=1000 and mz2=1000.01 overlap if ppm=10.")
+              )
+            )
+          ),
+          p("Processing parameters"),
+          bslib::layout_column_wrap(
+            width = "180px",  heights_equal = "row",
+            switch_panel(
+              label = "transform (method)",
+              switch_id = "abid_par_transform_apply", value = FALSE,
+              selectInput(inputId = "abid_par_transform_method", label = NULL, choices = c("sqrt", "log2", "log10"), selected = "sqrt") |> bslib::tooltip("Transformation method [suggested: sqrt]")
+            ),
+            switch_panel(
+              label = "smoothing (hWS)",
+              switch_id = "abid_par_smoothing_apply",
+              numericInput(inputId = "abid_par_smoothing_halfWindowSize", label = NULL, value = 1, min = 0, max = 50, step = 1) |> bslib::tooltip("Smoothing parameter: 'half window size' of peak.")
+            ),
+            switch_panel(
+              label = "baseline (method)",
+              switch_id = "abid_par_baseline_apply",
+              selectInput(inputId = "abid_par_baseline_method", label = NULL, choices = c("SNIP", "TopHat", "ConvexHull", "median"), selected = "TopHat") |> bslib::tooltip("Select method for baseline estimation.")
+            ),
+            switch_panel(
+              label = "keep monoisotopic",
+              switch_id = "abid_par_filter_monoiso",
+              numericInput(inputId = "abid_par_filter_monoiso_gap", label = NULL, value = 1.1, min = 0.1, max = 5, step = 0.1) |> bslib::tooltip("Setting an appropriate gap size allows to keep only monoisotopic peaks from a peak group.")
+            ),
+            switch_panel(
+              label = "peak picking pars",
+              switch_id = "abid_par_peakpicking_apply",
+              shiny::div(
+                style = "display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; width:100%;",
+                numericInput(inputId = "abid_par_peakpicking_halfWindowSize", label = NULL, value = 1) |> bslib::tooltip("Peak picking parameter: 'half window size' of peak [suggested: 1..5]."),
+                numericInput(inputId = "abid_par_peakpicking_SNR", label = NULL, value = 10) |> bslib::tooltip("Peak picking parameter: 'Signal/Noise ratio' [suggested: 2..10].")
+              )
+            )
+          ),
+          bslib::layout_columns(
+            actionButton(inputId = "abid_par_reprocess_lib", label = "lib") |> bslib::tooltip("Reprocess all samples from selected library with current parameter settings."),
+            actionButton(inputId = "abid_par_reprocess_sample", label = "sam") |> bslib::tooltip("Reprocess new sample  with current parameter settings."),
+            actionButton(inputId = "abid_par_reprocess_both", label = "both") |> bslib::tooltip("Reprocess all samples from selected library and new sample with current parameter settings.")
+          )
+        ),
+        bslib::layout_sidebar(
+          padding = 2, fill = FALSE,
+          sidebar = bslib::sidebar(
+            width = 480, position = "right",
+            bslib::layout_column_wrap(
+              width = 120, heights_equal = "row",
+              radioButtons(inputId = "abid_par_specplot_showmass", label = "show peak m/z", choices = list("always", "on_zoom", "never"), inline = TRUE, selected = "on_zoom"),
+              radioButtons(inputId = "abid_par_specplot_precision", label = "m/z precision", choices = list(0, 1, 4), inline = TRUE),
+              radioButtons(inputId = "abid_par_specplot_plottype", label = "plot type", choices = list("raw", "head2tail"), inline = TRUE, selected = "raw"),
+              shinyjs::hidden(radioButtons(inputId = "abid_par_subclasspeaks_show", label = "show scp pos", choices = list("none", "all", "overlapping"), inline = TRUE, selected = "overlapping")) |> bslib::tooltip("For a subclass selected in the subclass table, peak positions from this subclass can be indicated by red lines just above the x-axis of the 'sample plot'."),
+              shinyjs::hidden(bslib::input_switch(id = "abid_par_testplot_show", label = "mass dev plot", value = FALSE)) |> bslib::tooltip("Show a 'mass deviation plot' depicting the distance to the closest possible matching peak, to get an idea of the effect of hte selected 'dmz [Da]' on overlapping peaks or to detect a potential drift of MS accuracy."),
+              shinyjs::hidden(radioButtons(inputId = "abid_par_testplot_win", label = "axis exp fac", choices = list(1, 2, 10), selected = 2, inline = TRUE)) |> bslib::tooltip("This factor is used to multiply the value of 'dmz [Da]' to expand the y-axis of the 'mass deviation plot'.")
+            )
+          ),
+          shiny::div(
+            plotOutput("abid_specplot_lib", height = "300px", dblclick = dblclickOpts(id = "abid_specplot_lib_dblclick"), brush = brushOpts(id = "abid_specplot_lib_brush", direction = "x", resetOnNew = TRUE)) |> bslib::tooltip("You may select a mass range [Click and Drag] with the cursor to zoom. Use [Double Click] to unzoom.", placement = "left"),
+            uiOutput("abid_specplot_new") |> bslib::tooltip("You may select a mass range [Click and Drag] with the cursor to zoom. Use [Double Click] to unzoom.", placement = "left"),
+            uiOutput("abid_testplot")
+          )
+        ),
         div(
-          style = "margin-bottom: 20px; width: 100%; min-height: 40px",
-          div(
-            style = "float: left; font-size: 20px; width: 30%",
-            shiny::strong("BAM"), shiny::em("ABID")
+          class = "tables-grid",
+          #style = "outline: 2px solid red; height: 720px",
+          style = "height: 720px",
+          bslib::card(
+            style = "height: 100%;",
+            #bslib::card_header("Library meata data") |> bslib::tooltip("column 'n_o' shows number of overlapping peaks with a loaded sample"),
+            bslib::card_header("Library meata data"),
+            DTOutput("abid_table_lib") |> bslib::tooltip("You may click on any row to show the corresponding spectrum.")
           ),
-          div(
-            style = "float: right; width: 70%;",
-            HTML(
-              'ver', as.character(utils::packageVersion("ABID")), 
-              '|', as.character(utils::packageDate("ABID")),
-              '| <a href="mailto:jan.lisec@bam.de">jan.lisec@bam.de</a>',
-              ifelse(bam_server, '| <a href="https://www.bam.de/Navigation/DE/Services/Datenschutz/datenschutz.html" target="_blank" rel="noopener noreferrer">BAM Datenschutzerkl\u00e4rung</a>', '')
-            )
-          )
-        ),
-        fluidRow(
-          column(
-            width = 6,
-            selectInput(inputId = "abid_par_libsource", label = "Select library", choices = list("abid_lib", "upload files"), selected = "abid_lib"),
-            fileInput(inputId = "abid_par_path_libfiles", label = "Select Library Files", multiple = TRUE),
-            selectInput(inputId = "abid_par_selector_lib_entry", label = "Lib ID", choices = NULL)
+          bslib::card(
+            style = "height: 100%;",
+            bslib::card_header("Peak list of test sample"),
+            DTOutput("abid_table_new_peaks") |> bslib::tooltip("You may click on any row to zoom to the corresponding spectrum.")
           ),
-          column(
-            width = 6,
-            fileInput(inputId = "abid_par_path_newfile", label = "Load Sample"),
-            fluidRow(
-              column(width = 6, numericInput(inputId = "abid_par_match_dmz", label = "dmz [Da]", value = 0) %>% bs_embed_tooltip(title = "Absolute deviation allowed in testing for overlapping signals. Example: mz1=1000 and mz2=1000.01 overlap if dmz=0.01.")),
-              column(width = 6, numericInput(inputId = "abid_par_match_ppm", label = "dmz [ppm]", value = 0) %>% bs_embed_tooltip(title = "Relative deviation allowed in testing for overlapping signals. Example: mz1=1000 and mz2=1000.01 overlap if ppm=10."))
-            )
-          )
-        ),
-        tabsetPanel(
-          tabPanel(
-            title = "Processing", p(""),
-            fluidRow(
-              column(width = 3, actionButton(inputId = "abid_par_reprocess_lib", label = "library", width = "100%") %>% bs_embed_tooltip(title = "Reprocess all samples from selected library with current parameter settings.")),
-              column(width = 3, actionButton(inputId = "abid_par_reprocess_sample", label = "sample", width = "100%") %>% bs_embed_tooltip(title = "Reprocess new sample  with current parameter settings.")),
-              column(width = 3, actionButton(inputId = "abid_par_reprocess_both", label = "both", width = "100%") %>% bs_embed_tooltip(title = "Reprocess all samples from selected library and new sample with current parameter settings."))
-            ),
-            p(""),
-            fluidRow(
-              column(width = 3, checkboxInput(inputId = "abid_par_transform_apply", label = "transform", value = FALSE) %>% bs_embed_tooltip(title = "Select to include transformation step in spectra processing.")),
-              column(width = 3, selectInput(inputId = "abid_par_transform_method", label = "method", choices = c("sqrt", "log2", "log10"), selected = "sqrt") %>% bs_embed_tooltip(title = "Transformation method [suggested: sqrt]")),
-              column(width = 3, checkboxInput(inputId = "abid_par_smoothing_apply", label = "smoothing", value = TRUE) %>% bs_embed_tooltip(title = "Select to include smoothing step in spectra processing.")),
-              column(width = 3, numericInput(inputId = "abid_par_smoothing_halfWindowSize", label = "hWS", value = 1, min = 0, max = 50, step = 1) %>% bs_embed_tooltip(title = "Smoothing parameter: 'half window size' of peak."))
-            ),
-            fluidRow(
-              column(width = 3, checkboxInput(inputId = "abid_par_baseline_apply", label = "baseline correction", value = TRUE) %>% bs_embed_tooltip(title = "Select to include baseline correction step in spectra processing.")),
-              column(width = 3, selectInput(inputId = "abid_par_baseline_method", label = "method", choices = c("SNIP", "TopHat", "ConvexHull", "median"), selected = "TopHat") %>% bs_embed_tooltip(title = "Select method for baseline estimation.")),
-              column(width = 3, checkboxInput(inputId = "abid_par_filter_monoiso", label = "keep only monoisotopic peaks", value = TRUE)),
-              column(width = 3, numericInput(inputId = "abid_par_filter_monoiso_gap", label = "gap size [Da]", value = 1.1))
-            ),
-            fluidRow(
-              column(width = 3, checkboxInput(inputId = "abid_par_peakpicking_apply", label = "peak picking", value = TRUE) %>% bs_embed_tooltip(title = "Select to include peak picking step in spectra processing.")),
-              column(width = 3, numericInput(inputId = "abid_par_peakpicking_halfWindowSize", label = "hWS", value = 1) %>% bs_embed_tooltip(title = "Peak picking parameter: 'half window size' of peak [suggested: 1..5].")),
-              column(width = 3, numericInput(inputId = "abid_par_peakpicking_SNR", label = "SNR", value = 10) %>% bs_embed_tooltip(title = "Peak picking parameter: 'Signal/Noise ratio' [suggested: 2..10]."))
-            )
-          ),
-          tabPanel(
-            title = "Display", p(""),
-            fluidRow(
-              column(width = 4, radioButtons(inputId = "abid_par_specplot_showmass", label = "show peak m/z", choices = list("always", "on_zoom", "never"), selected = "on_zoom")),
-              column(width = 4, radioButtons(inputId = "abid_par_specplot_precision", label = "m/z precision", choices = list(0, 1, 4), inline = TRUE)),
-              column(width = 4, radioButtons(inputId = "abid_par_specplot_plottype", label = "plot type", choices = list("raw", "head2tail"), selected = "raw"))
-            ),
-            fluidRow(
-              column(width = 4, checkboxInput(inputId = "abid_par_testplot_show", label = "show mass deviation plot", value = FALSE)),
-              column(width = 4, radioButtons(inputId = "abid_par_testplot_win", label = "m/z dev plot window", choices = list(1, 2, 10), inline = TRUE)),
-              column(width = 4, radioButtons(inputId = "abid_par_subclasspeaks_show", label = "show subclass peak positions", choices = list("none", "all", "overlapping"), selected = "overlapping"))
-            )
-          ),
-          id = "abid_par_panel",
-          selected = "Display",
-          type = "tabs"
-        )
-      ),
-
-      # Show a specplot
-      mainPanel(
-        # verbatimTextOutput("test"),
-        plotOutput("abid_specplot_lib", height = "300px", dblclick = dblclickOpts(id = "abid_specplot_lib_dblclick"), brush = brushOpts(id = "abid_specplot_lib_brush", direction = "x", resetOnNew = TRUE)) %>% bs_embed_tooltip(title = "You may select a mass range [Click and Drag] with the cursor to zoom. Use [Double Click] to unzoom.", placement = "left"),
-        uiOutput("abid_specplot_new") %>% bs_embed_tooltip(title = "You may select a mass range [Click and Drag] with the cursor to zoom. Use [Double Click] to unzoom.", placement = "left"),
-        uiOutput("abid_testplot"),
-        tabsetPanel(
-          tabPanel(
-            title = "Library comparison", p(""),
-            DTOutput("abid_table_lib") # %>% bs_embed_tooltip(title = "You may click on any row to show the corresponding spectrum.")
-          ),
-          tabPanel(
-            title = "Peak list of test sample",
-            DTOutput("abid_table_new_peaks") # %>% bs_embed_tooltip(title = "You may click on any row to zoom to the corresponding spectrum.")
-          ),
-          tabPanel(
-            title = "Subclass of test sample",
+          bslib::card(
+            style = "height: 100%;",
+            bslib::card_header("Subclass of test sample"),
             DTOutput("abid_table_subclass_prediction")
-          ),
-          id = "abid_tabPanel_tables"
+          )
         )
       )
     )
   )
+    
 
   # Define server logic ----
   server <- function(input, output, session) {
@@ -158,9 +204,6 @@ abid_app <- function() {
     ### setup Options ############################################################
     # increase maximum file size for upload
     options(shiny.maxRequestSize = 30 * 1024^2) # BrukerFlex Files are >5MB
-    # hide UI Elements for 'new sample'
-    hideElement(id = "abid_par_match_dmz")
-    hideElement(id = "abid_par_match_ppm")
 
     ### setup reactive Values ####################################################
     # user can make columns invisible on demand
@@ -171,14 +214,12 @@ abid_app <- function() {
     spec_plots_xmin <- reactiveVal(NA)
     spec_plots_xmax <- reactiveVal(NA)
 
-
     ### load libraries ###########################################################
     # this is the prepared consensus peak list of Dennis
     subclass_peak_list <- ABID::subclass_peak_list
-    # data_env <- new.env()
-    # data(subclass_peak_list, package = "ABID", envir = data_env)
-    # subclass_peak_list <- get("subclass_peak_list", envir = data_env)
-
+    
+    shinyjs::disable(id = "abid_par_peakpicking_apply")
+    
     ### internal functions #######################################################
     # define the (pre) processing steps in a functions
     MALDIquant_pre_process <- function(x) {
@@ -221,7 +262,7 @@ abid_app <- function() {
       if (test) {
         # x@mass[c(T,T,round(test)==0)]
         gr <- GetGroupFactor(x = x@mass, gap = input$abid_par_filter_monoiso_gap)
-        out <- ldply(
+        out <- ldply_base(
           split(data.frame(x@mass, x@intensity, x@snr), gr),
           function(y) {
             y[which.max(y[, 2]), ]
@@ -270,7 +311,7 @@ abid_app <- function() {
       message("Loading Test Spectrum")
       out <- readABSpec(file = input$abid_par_path_newfile$datapath)
       # rng <- 100*c(floor(min(out@mass)/100),ceiling(max(out@mass)/100))
-      dmz <- round(10 * median(diff(out@mass)), 3)
+      dmz <- round(10 * stats::median(diff(out@mass)), 3)
       updateNumericInput(session = session, inputId = "abid_par_match_dmz", value = dmz)
       # updateNumericInput(session = session, inputId = "abid_par_match_ppm", value = dmz)
       return(out)
@@ -372,8 +413,8 @@ abid_app <- function() {
     abid_table_lib_pre <- reactive({
       # req(abid_lib_spectra_raw())
       validate(need(abid_lib_spectra_raw(), message = "Please select library"))
-      out <- ldply(abid_lib_spectra_raw(), function(x) {
-        unlist(MALDIquant::metaData(x))
+      out <- ldply_base(abid_lib_spectra_raw(), function(x) {
+        as.data.frame(MALDIquant::metaData(x))
       })
       colnames(out)[1] <- "ID"
       out[, "ID"] <- factor(out[, "ID"], levels = str_sort(out[, "ID"], numeric = TRUE))
@@ -385,7 +426,7 @@ abid_app <- function() {
         if (!is.null(input$abid_par_path_newfile) && !is.null(abid_new_peaks())) {
           out <- cbind(
             out,
-            ldply(abid_lib_peaks(), function(x) {
+            ldply_base(abid_lib_peaks(), function(x) {
               get_overlap(x = x, y = abid_new_peaks(), type = "all", dmz = input$abid_par_match_dmz, ppm = input$abid_par_match_ppm)
             })
           )
@@ -431,11 +472,15 @@ abid_app <- function() {
       # print(input$abid_par_path_newfile)
       toggleElement(id = "abid_par_match_dmz", condition = !is.null(input$abid_par_path_newfile))
       toggleElement(id = "abid_par_match_ppm", condition = !is.null(input$abid_par_path_newfile))
+      toggleElement(id = "abid_par_testplot_show", condition = !is.null(input$abid_par_path_newfile))
+      toggleElement(id = "abid_par_testplot_win", condition = input$abid_par_testplot_show)
+      toggleElement(id = "abid_par_subclasspeaks_show", condition = !is.null(input$abid_par_path_newfile))
     })
 
     # ...
     observeEvent(input$abid_par_testplot_show, {
       toggleElement(id = "abid_testplot", condition = input$abid_par_testplot_show)
+      toggleElement(id = "abid_par_testplot_win", condition = input$abid_par_testplot_show)
     })
 
     # ...
@@ -518,36 +563,50 @@ abid_app <- function() {
     ### outputs ##################################################################
     ## tables
     # table of peaks of 'new sample'
-    output$abid_table_new_peaks <- renderDT(
-      {
-        abid_table_new_peaks_pre()
-      },
-      selection = list(mode = "single", target = "row"),
-      rownames = NULL
-    )
+    output$abid_table_new_peaks <- renderDT({
+      DT::datatable(
+        data = abid_table_new_peaks_pre(), 
+        options = list(
+          dom = "t",
+          paging = FALSE,
+          order = list(list(1, "desc"))
+        ),
+        selection = list(mode = "single", target = "row"),
+        rownames = NULL
+      )
+    })
 
-    output$abid_table_subclass_prediction <- renderDT(
-      {
-        abid_table_subclass_prediction_pre()
-      },
-      selection = list(mode = "single", target = "row"),
-      rownames = NULL
-    ) # , selected=1
+    output$abid_table_subclass_prediction <- renderDT({
+      x <- abid_table_subclass_prediction_pre()
+      colnames(x) <- gsub("n_peaks", "n_p", colnames(x))
+      colnames(x) <- gsub("n_overlap", "n_o", colnames(x))
+      DT::datatable(
+        data = x,
+        options = list(dom = "t", paging = FALSE),
+        selection = list(mode = "single", target = "row", selected=1),
+        rownames = NULL
+      )
+    })
 
-    output$abid_table_lib <- renderDT(
-      {
-        abid_table_lib_pre()
-      },
-      extensions = "Buttons",
-      options = list(
-        stateSave = TRUE,
-        stateLoadParams = JS("function (settings, data) {return false;}"),
-        dom = "Bfrtip", buttons = I("colvis"),
-        columnDefs = list(list(visible = FALSE, targets = isolate(col_invisible())))
-      ),
-      selection = list(mode = "single", target = "row"),
-      rownames = NULL
-    )
+    output$abid_table_lib <- renderDT({
+      x <- abid_table_lib_pre()
+      colnames(x) <- gsub("n_peaks", "n_p", colnames(x))
+      colnames(x) <- gsub("matching.peptides", "n_o", colnames(x))
+      DT::datatable(
+        data = x, 
+        options = list(
+          stateSave = TRUE,
+          stateLoadParams = JS("function (settings, data) {return false;}"),
+          #autoWidth = TRUE,
+          dom = "Bfrtip", buttons = I("colvis"),
+          columnDefs = list(list(visible = FALSE, targets = isolate(col_invisible())))
+        ),
+        extensions = "Buttons",
+        selection = list(mode = "single", target = "row"),
+        rownames = NULL
+      )
+    })
+    
 
     ## plots
     # ...
@@ -561,14 +620,14 @@ abid_app <- function() {
       zoom_status <- diff(range(sm)) > 1.05 * (spec_plots_xmax() - spec_plots_xmin())
       xlim <- c(spec_plots_xmin(), spec_plots_xmax())
       par(mar = c(2.5, 2.5, ifelse(ptr, 0.5, 0), 0.5))
-      plot(x = sm[flt], y = m * si[flt], type = "l", xaxs = "i", xlab = "", ylab = "", xlim = xlim, col = ifelse(ptr, 1, grey(0.9)))
+      plot(x = sm[flt], y = m * si[flt], type = "l", xaxs = "i", xlab = "", ylab = "", xlim = xlim, col = ifelse(ptr, 1, grDevices::grey(0.9)))
       mp <- NULL
       if (!is.null(abid_new_peaks()) && length(mass(abid_new_peaks())) >= 1) mp <- mass(abid_new_peaks())
       if (!is.null(mp)) {
         mi <- m * intensity(abid_new_peaks())
         points(x = mp, y = mi, col = 4, pch = 4)
         if (!ptr) segments(x0 = mp, y0 = rep(0, length(mi)), y1 = mi)
-        mtext(text = paste("n_peaks =", length(mp)), side = ifelse(ptr, 3, 1), line = -1.2, adj = 0.02)
+        mtext(text = paste("n_peaks =", length(mp)), side = ifelse(ptr, 3, 1), line = -1.2, at = par("usr")[1], adj = -0.05)
         if (input$abid_par_specplot_showmass == "always" | (input$abid_par_specplot_showmass == "on_zoom" & zoom_status)) {
           text(x = mp, y = mi, labels = round(mp, as.numeric(input$abid_par_specplot_precision)), pos = 4)
         }
@@ -581,15 +640,15 @@ abid_app <- function() {
               any(abs(lmp - x) <= max(input$abid_par_match_dmz, x * input$abid_par_match_ppm / 10^6))
             })
             if (any(flt)) points(x = mp[flt], y = mi[flt], bg = 3, pch = 21)
-            mtext(text = paste("peak overlap =", sum(flt)), side = ifelse(ptr, 3, 1), line = -2.4, adj = 0.02)
+            mtext(text = paste("peak overlap =", sum(flt)), side = ifelse(ptr, 3, 1), line = -2.4, at = par("usr")[1], adj = -0.05)
           }
         }
       }
       if (!is.null(subclasspeaks())) {
         rug(x = subclasspeaks(), col = 2, lwd = 2, quiet = TRUE)
       }
-      mtext(text = input$abid_par_path_newfile$name, side = ifelse(ptr, 3, 1), line = -1.2, adj = 0.98, font = 2)
-      mtext(text = "(sample)", side = ifelse(ptr, 3, 1), line = -2.4, adj = 0.98, font = 3)
+      mtext(text = input$abid_par_path_newfile$name, side = ifelse(ptr, 3, 1), line = -1.2, at = par("usr")[2], adj = 1.03, font = 2)
+      mtext(text = "(sample)", side = ifelse(ptr, 3, 1), line = -2.4, at = par("usr")[2], adj = 1.06, font = 3)
     })
 
     # ...
@@ -604,7 +663,7 @@ abid_app <- function() {
         xlim <- c(spec_plots_xmin(), spec_plots_xmax())
         zoom_status <- diff(range(sm)) > 1.05 * (spec_plots_xmax() - spec_plots_xmin())
         par(mar = c(ifelse(ptr, 0.5, 0), 2.5, 2.5, 0.5))
-        plot(x = sm[flt], y = si[flt], type = "l", xaxs = "i", xlab = "", ylab = "", xlim = xlim, axes = F, col = ifelse(ptr, 1, grey(0.9)))
+        plot(x = sm[flt], y = si[flt], type = "l", xaxs = "i", xlab = "", ylab = "", xlim = xlim, axes = F, col = ifelse(ptr, 1, grDevices::grey(0.9)))
         axis(2)
         axis(3)
         box()
@@ -616,10 +675,10 @@ abid_app <- function() {
           if (input$abid_par_specplot_showmass == "always" | (input$abid_par_specplot_showmass == "on_zoom" & zoom_status)) {
             text(x = pm, y = pi, labels = round(pm, as.numeric(input$abid_par_specplot_precision)), pos = 4)
           }
-          mtext(text = paste("n_peaks =", length(pm)), side = 3, line = -1.2, adj = 0.02, font = 1)
+          mtext(text = paste("n_peaks =", length(pm)), side = 3, line = -1.2, at = par("usr")[1], adj = -0.05,  font = 1)
         }
-        mtext(text = input$abid_par_selector_lib_entry, side = 3, line = -1.2, adj = 0.98, font = 2)
-        mtext(text = "(library)", side = 3, line = -2.4, adj = 0.98, font = 3)
+        mtext(text = input$abid_par_selector_lib_entry, side = 3, line = -1.2, at = par("usr")[2], adj = 1.03,  font = 2)
+        mtext(text = "(library)", side = 3, line = -2.4, at = par("usr")[2], adj = 1.06,  font = 3)
       } else {
         plot(0, 0, axes = F, ann = F, type = "n")
         text(0, 0, "Please select a library")
@@ -656,21 +715,26 @@ abid_app <- function() {
         d_mz <- sapply(mass(abid_new_peaks()), function(x) {
           c(x - mz_test)[which.min(abs(x - mz_test))]
         })
-        par(mar = c(2, 2, 0, 0) + 0.5)
-        plot(x = mass(abid_new_peaks()), y = d_mz, ylim = c(-1, 1) * as.numeric(input$abid_par_testplot_win) * input$abid_par_match_dmz, xlim = x_rng, type = "p", xaxs = "i", xlab = "", ylab = "")
-        abline(h = c(-1, 1) * input$abid_par_match_dmz, col = grey(0.8))
+        par(mar = c(0, 2, 0, 0) + 0.5)
+        plot(x = mass(abid_new_peaks()), y = d_mz, ylim = c(-1, 1) * as.numeric(input$abid_par_testplot_win) * input$abid_par_match_dmz, xlim = x_rng, type = "p", xaxs = "i", xlab = "", ylab = "", axes = FALSE)
+        axis(2)
+        axis(side = 3, labels = FALSE)
+        box()
+        dmz <- input$abid_par_match_dmz
+        abline(h = c(-1, 1) * dmz, col = grDevices::grey(0.8))
+        text(x = par("usr")[2], y = dmz, labels = paste(dmz, "Da"), adj = c(1.05,1.1))
       }
     })
 
     # ...
     output$abid_testplot <- renderUI({
       if (!is.null(abid_new_spectra())) {
-        plotOutput("abid_testplot_pre")
+        plotOutput(outputId = "abid_testplot_pre", height = "150px")
       }
     })
   }
 
-  # Run the application
+  # Run the application ----
   shinyApp(ui = ui, server = server)
   
 }

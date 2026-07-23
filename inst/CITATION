@@ -1,0 +1,29 @@
+  citHeader("The ABID package implements a Shiny-App to process data genarated in MALDI-TOF-MS measurements.")
+  
+  bibentry(
+    bibtype  = "Article",
+    textVersion = "Tscheuschner, G., Kaiser, M. N., Lisec, J., Beslic, D., Muth, T., Krüger, M., Mages, H. W., Dorner, B. G., Knospe, J., Schenk, J. A., Sellrie, F., & Weller, M. G. (2022). MALDI-TOF-MS-Based Identification of Monoclonal Murine Anti-SARS-CoV-2 Antibodies within One Hour. Antibodies, 11(2), 27. https://doi.org/10.3390/antib11020027",
+    title    = "MALDI-TOF-MS-Based Identification of Monoclonal Murine Anti-SARS-CoV-2 Antibodies within One Hour",
+    author   = c(
+      person("Georg", "Tscheuschner"),
+      person("Melanie N.", "Kaiser"),
+      person("Jan", "Lisec"),
+      person("Denis", "Beslic"),
+      person("Thilo", "Muth"),
+      person("Maren", "Krüger"),
+      person("Hans Werner", "Mages"),
+      person("Brigitte G.", "Dorner"),
+      person("Julia", "Knospe"),
+      person("Jörg A.", "Schenk"),
+      person("Frank", "Sellrie"),
+      person("Michael G.", "Weller")
+    ),
+    journal  = "Antibodies",
+    year     = 2022,
+    volume   = 11,
+    number   = 2,
+    doi      = "10.3390/antib11020027"
+  )
+  
+  citFooter("This open-source software implements academic research by the authors and co-workers. If you use it, please support the project by citing the appropriate journal article.")
+  
